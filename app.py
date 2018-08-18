@@ -24,7 +24,7 @@ API_VERSION = 'v3'
 # Note: A secret key is included in the sample so that it works.
 # If you use this code in your application, replace this with a truly secret
 # key. See http://flask.pocoo.org/docs/0.12/quickstart/#sessions.
-app.secret_key = 'AIzaSyBujziiBKgXzj0taKn6eqkDb6YM0FbymXE'
+app.secret_key = 'xxxx'
 
 
 @app.route("/")
