@@ -1,9 +1,8 @@
 import flask
 from flask import Flask, render_template
-import auth
 import os
 import requests
-
+import json
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
@@ -25,16 +24,20 @@ API_VERSION = 'v3'
 # Note: A secret key is included in the sample so that it works.
 # If you use this code in your application, replace this with a truly secret
 # key. See http://flask.pocoo.org/docs/0.12/quickstart/#sessions.
-app.secret_key = 'xxxx'
+app.secret_key = 'AIzaSyBujziiBKgXzj0taKn6eqkDb6YM0FbymXE'
 
 
 @app.route("/")
 def index():
-	return render_template('index.html')
+  video_list = test_api_request()
+  if 'credentials' not in flask.session:
+    return render_template('index.html', logged_in = False, videos = video_list)
+  else:
+    return render_template('index.html', logged_in = True, videos = video_list)
 
 
 
-@app.route('/test')
+@app.route("/test/test_request")
 def test_api_request():
   if 'credentials' not in flask.session:
     return flask.redirect('authorize')
@@ -44,12 +47,12 @@ def test_api_request():
       **flask.session['credentials'])
 
   youtube = googleapiclient.discovery.build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
-  channel = youtube.channels().list(part="id",mine=True)
-
-  videos = youtube.videos().list(part='snippet, contentDetails',
-    maxResults=25,
-    id= 'UCLK3SeBCJ_AulkgpBYk1dFA').execute()
+  channel = youtube.channels().list(part="snippet,contentDetails,statistics",mine=True).execute()
   
+  playlist = youtube.playlistItems().list(
+    part='snippet,contentDetails',
+    playlistId=channel['items'][0]['contentDetails']['relatedPlaylists']['likes'],
+    maxResults=25).execute()  
 
     
 
@@ -58,7 +61,7 @@ def test_api_request():
   #              credentials in a persistent database instead.
   flask.session['credentials'] = credentials_to_dict(credentials)
 
-  return flask.jsonify(**videos)
+  return playlist
 
 
 @app.route('/authorize')
@@ -101,8 +104,8 @@ def oauth2callback():
   #              credentials in a persistent database instead.
   credentials = flow.credentials
   flask.session['credentials'] = credentials_to_dict(credentials)
-
-  return flask.redirect(flask.url_for('test_api_request'))
+  
+  return flask.redirect(flask.url_for('index'))
 
 
 @app.route('/revoke')
@@ -120,16 +123,21 @@ def revoke():
 
   status_code = getattr(revoke, 'status_code')
   if status_code == 200:
-    return('Credentials successfully revoked.')
+    app.logger.debug('Credentials successfully revoked.')
+    clear_credentials()
+    return flask.redirect(flask.url_for('index'))
   else:
     return('An error occurred.')
 
 
-@app.route('/clear')
+
 def clear_credentials():
   if 'credentials' in flask.session:
     del flask.session['credentials']
-  return ('Credentials have been cleared.<br><br>')
+    
+
+  app.logger.debug ('Credentials have been cleared.<br><br>')
+  return flask.redirect(flask.url_for('index'))
 
 
 def credentials_to_dict(credentials):
