@@ -3,18 +3,24 @@
   {% if logged_in %}
 
     {% if videos != null %}
-        {{videos}}
-       <table border = 1>
-             {% for video in videos[1] %}
-             
+        
+       <table id="videos">
                 <tr>
-                   
-                   <th> {{ video['contentDetails']['videoPublishedAt'] }} </th>
-                   <td> {{ video['snippet']['title'] }} </td>
+                    <th>Select/Unselect <input type="checkbox" name="SelectAll" value="SelectAll"></th>                
+                    <th> Date Video Liked </th>
+                    <th> Video Title </th>
                 </tr>
+                {% for video in videos['items'] %}
+                
+                    <tr>
+                        <td><input type="checkbox" name={{video['snippet']['publishedAt']}} value={{video['snippet']['title']}}></td>   
+                        <td>{{video['snippet']['publishedAt']}}</td> 
+                        <td>{{video['snippet']['title']}}</td>
+                                       
+                    </tr>
                 
              {% endfor %}
-          </table>
+        </table>
     {% else %}
         <b><h1>There are no liked videos.</h1></b>
     {% endif %}
