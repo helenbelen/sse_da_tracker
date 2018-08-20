@@ -2,20 +2,20 @@
 {% block body %}
   {% if logged_in %}
 
-    {% if videos != null %}
+    {% if videos %}
         
        <table id="videos">
                 <tr>
-                    <th>Select/Unselect <input type="checkbox" name="SelectAll" value="SelectAll"></th>                
+                    <th>Select/Unselect <input type="checkbox" id="SelectAll" value="SelectAll" onclick="select_all()"></th>                
                     <th> Date Video Liked </th>
                     <th> Video Title </th>
                 </tr>
-                {% for video in videos['items'] %}
+                {% for key,value in videos.items() %}
                 
                     <tr>
-                        <td><input type="checkbox" name={{video['snippet']['publishedAt']}} value={{video['snippet']['title']}}></td>   
-                        <td>{{video['snippet']['publishedAt']}}</td> 
-                        <td>{{video['snippet']['title']}}</td>
+                        <td><input type="checkbox" name="video" value=key></td>   
+                        <td>{{key}}</td> 
+                        <td>{{value}}</td>
                                        
                     </tr>
                 

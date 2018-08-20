@@ -3,6 +3,7 @@ from flask import Flask, render_template
 import os
 import requests
 import json
+import datetime
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
@@ -29,16 +30,18 @@ app.secret_key = 'xxxx'
 
 @app.route("/")
 def index():
-  video_list = test_api_request()
+  # try:
+  video_list = api_request()
+  # except:
+  #   video_list = {}
+
   if 'credentials' not in flask.session:
     return render_template('index.html', logged_in = False, videos = video_list)
   else:
     return render_template('index.html', logged_in = True, videos = video_list)
 
 
-
-@app.route("/test/test_request")
-def test_api_request():
+def api_request():
   if 'credentials' not in flask.session:
     return flask.redirect('authorize')
 
@@ -54,17 +57,23 @@ def test_api_request():
     playlistId=channel['items'][0]['contentDetails']['relatedPlaylists']['likes'],
     maxResults=25).execute()  
 
-    
 
   # Save credentials back to session in case access token was refreshed.
   # ACTION ITEM: In a production app, you likely want to save these
   #              credentials in a persistent database instead.
   flask.session['credentials'] = credentials_to_dict(credentials)
-  video_list = {}
-  video_list = playlist
+  mylist = {}
+  mylist = playlist
   
-  return video_list
+  return process_response(mylist)
 
+def process_response(a_list):
+  processed_list = {}
+  for video in a_list['items']:
+      newdate = datetime.datetime.strptime(video['snippet']['publishedAt'], "%Y-%m-%dT%H:%M:%S.000Z")
+      d = datetime.datetime.strftime(newdate,"%m-%d-%Y %H:%M")
+      processed_list[d] = video['snippet']['title']
+  return processed_list
 
 @app.route('/authorize')
 def authorize():
@@ -126,11 +135,12 @@ def revoke():
   status_code = getattr(revoke, 'status_code')
   if status_code == 200:
     app.logger.debug('Credentials successfully revoked.')
-    clear_credentials()
-    return flask.redirect(flask.url_for('index'))
+    
   else:
-    return('An error occurred.')
-
+    app.logger.debug('An error occurred.')
+  
+  clear_credentials()
+  return flask.redirect(flask.url_for('index'))
 
 
 def clear_credentials():
