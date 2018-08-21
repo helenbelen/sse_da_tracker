@@ -3,6 +3,7 @@ from flask import Flask, render_template
 import os
 import requests
 import json
+import re
 import datetime
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -52,11 +53,15 @@ def api_request():
   youtube = googleapiclient.discovery.build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
   channel = youtube.channels().list(part="snippet,contentDetails,statistics",mine=True).execute()
   
-  playlist = youtube.playlistItems().list(
-    part='snippet,contentDetails',
-    playlistId=channel['items'][0]['contentDetails']['relatedPlaylists']['likes'],
-    maxResults=25).execute()  
+  # playlist = youtube.playlistItems().list(
+  #   part='snippet,contentDetails',
+  #   playlistId=channel['items'][0]['contentDetails']['relatedPlaylists']['likes'],
+  #   maxResults=25).execute()  
 
+  playlist = youtube.videos().list(
+    part ='snippet,contentDetails',
+    myRating ='like',
+    maxResults = 25).execute()
 
   # Save credentials back to session in case access token was refreshed.
   # ACTION ITEM: In a production app, you likely want to save these
@@ -72,7 +77,21 @@ def process_response(a_list):
   for video in a_list['items']:
       newdate = datetime.datetime.strptime(video['snippet']['publishedAt'], "%Y-%m-%dT%H:%M:%S.000Z")
       d = datetime.datetime.strftime(newdate,"%m-%d-%Y %H:%M")
-      processed_list[d] = video['snippet']['title']
+      mydur = re.findall('[0-9]+',video['contentDetails']['duration'], flags=re.IGNORECASE)
+      tags = [" Day(s)"," Hour(s)"," Minutes"," Seconds"]
+      if len(mydur) == 1:
+        sub_tags = tags[3]
+      if len(mydur) == 2:
+        sub_tags = tags[2:]
+      if len(mydur) == 3:
+        sub_tags = tags[1:]
+      if len(mydur) == 4:
+        sub_tags = tags
+
+      dur_list = [mydur[i] + sub_tags[i] for i in range(0,len(mydur))]
+
+
+      processed_list[d] = [video['snippet']['title'],dur_list]
   return processed_list
 
 @app.route('/authorize')
