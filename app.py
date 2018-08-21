@@ -5,6 +5,8 @@ import requests
 import json
 import re
 import datetime
+from datetime import date
+import csv
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
@@ -74,25 +76,51 @@ def api_request():
 
 def process_response(a_list):
   processed_list = {}
+  csv_list = {} 
+
   for video in a_list['items']:
       newdate = datetime.datetime.strptime(video['snippet']['publishedAt'], "%Y-%m-%dT%H:%M:%S.000Z")
       d = datetime.datetime.strftime(newdate,"%m-%d-%Y %H:%M")
       mydur = re.findall('[0-9]+',video['contentDetails']['duration'], flags=re.IGNORECASE)
       tags = [" Day(s)"," Hour(s)"," Minutes"," Seconds"]
+      conv = [1440,60,1,(1/60)]
       if len(mydur) == 1:
         sub_tags = tags[3]
+        sub_conv = conv[3]
       if len(mydur) == 2:
         sub_tags = tags[2:]
+        sub_conv = conv[2:]
       if len(mydur) == 3:
         sub_tags = tags[1:]
+        sub_conv= conv[1:]
       if len(mydur) == 4:
         sub_tags = tags
+        sub_conv = conv
 
       dur_list = [mydur[i] + sub_tags[i] for i in range(0,len(mydur))]
-
-
       processed_list[d] = [video['snippet']['title'],dur_list]
+
+      minute_list = [ int(int(mydur[i]) * sub_conv[i]) for i in range(0,len(mydur))]
+      total_minutes = 0
+      for i in minute_list:
+        total_minutes += i
+      csv_list[d] = [video['snippet']['title'],total_minutes]
+      #write_csv(csv_list)
+
   return processed_list
+
+def write_csv(rows):
+  
+  overall_total = 0
+  mydate = date.today()
+  with open('DARport-'+str(mydate)+'.csv','w') as f:
+    
+    writer = csv.writer(f, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(['date','title','duration'])
+    for key,value in rows.items():
+      overall_total += value[1]
+      writer.writerow([key, value[0], value[1]])
+    writer.writerow([' ','Total',overall_total])  
 
 @app.route('/authorize')
 def authorize():
