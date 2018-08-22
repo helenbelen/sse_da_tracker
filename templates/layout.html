@@ -25,10 +25,12 @@
         <div class="jumbotron">
            {% if logged_in %}
                 <p class="lead"></p>
-                <p><a class="btn btn-lg btn-success" href="{{url_for('revoke')}}" role="button">Revoke Access</a>
+                <p><a class="btn btn-lg btn-danger" href="{{url_for('revoke')}}" role="button">Revoke Access</a><p class="message">{{message}}</p>
                 </p>
                 
-                
+                {% block body %}{% endblock %}  
+                <br>
+                <a class="btn btn-info btn-lg btn-block" href="{{url_for('print')}}" style="vertical-align:middle" role="button">Export To CSV</a> 
             {% else %}
                 <h1>DA Tracker App</h1>
                 <p class="lead"></p>
@@ -36,7 +38,7 @@
                 </p>
             {% endif %}
         
-            {% block body %}{% endblock %}
+            
         </div>
         
  
@@ -45,6 +47,9 @@
         </footer>
  
     </div>
+
+
+ 
 </body>
  
 </html>
