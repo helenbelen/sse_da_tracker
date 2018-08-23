@@ -1,7 +1,8 @@
 import flask
-from flask import Flask, render_template
+from flask import Flask, render_template, make_response, request
 import os
 import requests
+
 import json
 import re
 import datetime
@@ -33,23 +34,27 @@ app.secret_key = 'xxxx'
 
 @app.route("/")
 def index():
-  try:
-    flask.session['tabledata'] = api_request()
-    video_list = flask.session['tabledata']
-    message = "Table Updated From API On " + datetime.datetime.strftime(date.today(),'%m-%d-%Y')
-  except:
-    message = "Error: " + str(sys.exc_info())
-    if 'tabledata' in flask.session:
-      video_list = flask.session['tabledata']
-      message += "- Using Session."
-    else:
-      video_list = {}
-      message += " - No Videos In Session Data"
+  video_list = {}
+  message = " "
 
-  if 'credentials' not in flask.session:
-    return render_template('index.html', logged_in = False, videos = video_list, message = message)
-  else:
+  if 'credentials' in flask.session:
+    try:
+      flask.session['tabledata'] = api_request()
+      video_list = flask.session['tabledata']
+      message = "Table Updated From API On " + datetime.datetime.strftime(date.today(),'%m-%d-%Y')
+    except:
+      message = "Error: " + str(sys.exc_info())
+      if 'tabledata' in flask.session:
+        video_list = flask.session['tabledata']
+        message += "- Using Session Data."
+      else:
+        video_list = {}
+        message += " - No Videos In Session Data"
+
     return render_template('index.html', logged_in = True, videos = video_list, message = message)
+
+  else:
+    return render_template('index.html', logged_in = False, videos = video_list, message = message)
 
  
 
@@ -120,10 +125,18 @@ def revoke():
   clear_credentials()
   return flask.redirect(flask.url_for('index'))
 
-@app.route('/print')
-def print():
-  write_csv(flask.session['csvdata'])
-  return flask.redirect(flask.url_for('index'))
+@app.route('/download-file', methods=['POST'])
+def download():
+  flask.session['selected_csvdata'] = request.json['data']
+  
+
+  if 'csvdata' and 'selected_csvdata' in flask.session:
+    
+    return write_csv(flask.session['selected_csvdata'],flask.session['csvdata'])
+  else:
+    return flask.redirect(flask.url_for('index'),message = "No Data To Download.")
+
+  
 
 def api_request():
   if 'credentials' not in flask.session:
@@ -152,9 +165,9 @@ def api_request():
   mylist = {}
   mylist = playlist
   
-  return process_response(mylist)
+  return process_data(mylist)
 
-def process_response(a_list):
+def process_data(a_list):
   processed_list = {}
   csv_list = {} 
 
@@ -184,33 +197,40 @@ def process_response(a_list):
         sub_conv = conv
 
       dur_list = [mydur[i] + sub_tags[i] for i in range(0,len(mydur))]
+
       processed_list[d] = [video['snippet']['title'],dur_list]
 
       minute_list = [ int(int(mydur[i]) * sub_conv[i]) for i in range(0,len(mydur))]
       total_minutes = 0
       for i in minute_list:
         total_minutes += i
+
       csv_list[d] = [video['snippet']['title'],total_minutes]
+
       flask.session['csvdata'] = csv_list
 
   return processed_list
 
-def write_csv(rows):
+def write_csv(selected_rows, rows):
   
   overall_total = 0
   mydate = date.today()
-  with open('DARport-'+str(mydate)+'.csv','w') as f:
-    
-    writer = csv.writer(f, 
-      delimiter=',',
-      quotechar='"', 
-      quoting=csv.QUOTE_MINIMAL)
+  filename = 'DARport-'+str(mydate)+'.csv'
 
-    writer.writerow(['date','title','duration'])
-    for key,value in rows.items():
+  csv = 'date,title,duration\n'
+  for key,value in rows.items():
+    if key in selected_rows:
+      
       overall_total += value[1]
-      writer.writerow([key, value[0], value[1]])
-    writer.writerow([' ','Total',overall_total]) 
+      csv += key +',' + value[0] +','+ str(value[1]) + '\n'
+      
+  csv += ' ,Total,' + str(overall_total) +'\n'
+
+  response = make_response(csv)
+  cd = 'attachment; filename=' + filename
+  response.headers['Content-Disposition'] = cd
+  response.mimetype = 'text/csv'
+  return response
 
 def clear_credentials():
   if 'credentials' in flask.session:

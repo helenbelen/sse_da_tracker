@@ -14,7 +14,7 @@
                 {% for key,value in videos.items() %}
                 
                     <tr>
-                        <td><input type="checkbox" name="video" value=key></td>   
+                        <td><input type="checkbox" name="video" value="{{key}}"" onclick="list_edit(this,this.value)"></td>   
                         <td>{{key}}</td> 
 
                         <td>{{value[0]}}</td>
