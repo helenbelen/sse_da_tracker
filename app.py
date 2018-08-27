@@ -129,14 +129,11 @@ def revoke():
 def download():
   flask.session['selected_csvdata'] = request.json['data']
   
-
   if 'csvdata' and 'selected_csvdata' in flask.session:
-    
     return write_csv(flask.session['selected_csvdata'],flask.session['csvdata'])
-  else:
-    return flask.redirect(flask.url_for('index'),message = "No Data To Download.")
+   
+  return flask.redirect(flask.url_for('index'))
 
-  
 
 def api_request():
   if 'credentials' not in flask.session:
@@ -198,14 +195,16 @@ def process_data(a_list):
 
       dur_list = [mydur[i] + sub_tags[i] for i in range(0,len(mydur))]
 
-      processed_list[d] = [video['snippet']['title'],dur_list]
+      processed_list[d] = [video['snippet']['title'].replace(",",""),dur_list]
 
       minute_list = [ int(int(mydur[i]) * sub_conv[i]) for i in range(0,len(mydur))]
+      
       total_minutes = 0
       for i in minute_list:
+
         total_minutes += i
 
-      csv_list[d] = [video['snippet']['title'],total_minutes]
+      csv_list[d] = [video['snippet']['title'].replace(",",""),total_minutes]
 
       flask.session['csvdata'] = csv_list
 
@@ -220,34 +219,30 @@ def write_csv(selected_rows, rows):
   csv = 'date,title,duration\n'
   for key,value in rows.items():
     if key in selected_rows:
-      
       overall_total += value[1]
       csv += key +',' + value[0] +','+ str(value[1]) + '\n'
       
   csv += ' ,Total,' + str(overall_total) +'\n'
 
-  response = make_response(csv)
-  cd = 'attachment; filename=' + filename
-  response.headers['Content-Disposition'] = cd
-  response.mimetype = 'text/csv'
-  return response
+  return csv
 
 def clear_credentials():
   if 'credentials' in flask.session:
     del flask.session['credentials']
-    
+    app.logger.debug ('Credentials have been cleared.<br><br>')
 
-  app.logger.debug ('Credentials have been cleared.<br><br>')
   return flask.redirect(flask.url_for('index'))
 
 
 def credentials_to_dict(credentials):
+
   return {'token': credentials.token,
           'refresh_token': credentials.refresh_token,
           'token_uri': credentials.token_uri,
           'client_id': credentials.client_id,
           'client_secret': credentials.client_secret,
           'scopes': credentials.scopes}
+
 if __name__ == "__main__":
 	# When running locally, disable OAuthlib's HTTPs verification.
   # ACTION ITEM for developers:

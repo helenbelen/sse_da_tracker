@@ -1,19 +1,16 @@
 var selected_list = []
 
 function select_all(){
-	if (document.getElementById("SelectAll").checked == true){
-		checkboxes = document.getElementsByName("video");
-		for(i = 0; i < checkboxes.length; i++){
+	checkboxes = document.getElementsByName("video");
+	for(i = 0; i < checkboxes.length; i++){
+		if (document.getElementById("SelectAll").checked == true){
 			checkboxes[i].checked = true;
 		}
-	}
-	else{
-		for(i = 0; i < checkboxes.length; i++){
+		else{
 			checkboxes[i].checked = false;
 		}
+		list_edit(checkboxes[i],checkboxes[i].value);
 	}
-	
-
 }
 
 function list_edit(check, value){
@@ -31,17 +28,30 @@ function list_edit(check, value){
 }
 
 function send_selected() {
-	console.log(selected_list)
-  var xhttp = new XMLHttpRequest();
-  // xhttp.onreadystatechange = function() {
-  //   if (this.readyState == 4 && this.status == 200) {
-      
-  //   }
-  // };
-  xhttp.open("POST", "/download-file", true);
-  xhttp.setRequestHeader("Content-type", "application/json;;charset=UTF-8");
-  data = JSON.stringify({data : selected_list});
-  xhttp.send(data);
+if(selected_list.length > 0){
+	  
+	  var xhttp = new XMLHttpRequest();
+	  xhttp.onreadystatechange = function() {
+	    if (this.readyState == 4 && this.status == 200) {
+	    	var date = new Date();
+	     	var element = document.createElement('a');
+	     	element.setAttribute('href','data:text/csv;charset=utf-8,' + xhttp.responseText);
+	     	element.setAttribute('download','DAReport-' + date.toDateString());
+	     	element.style.display = 'none'
+	     	document.body.appendChild(element);
+	     	element.click();
+	     	document.body.removeChild(element);
+
+	    }
+	  };
+	  xhttp.open("POST", "/download-file", true);
+	  xhttp.setRequestHeader("Content-type", "application/json;;charset=UTF-8");
+	  data = JSON.stringify({data : selected_list});
+	  xhttp.send(data);
+ }
+ else{
+ 	alert("Please Select At Least One Video To Download To A File.")
+ }
 }
 
 
