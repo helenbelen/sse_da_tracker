@@ -17,7 +17,7 @@ app = Flask(__name__)
 
 # This variable specifies the name of a file that contains the OAuth 2.0
 # information for this application, including its client_id and client_secret.
-CLIENT_SECRETS_FILE = "/Users/HelenBelen/Documents/Code/datracker/client_secret.json"
+CLIENT_SECRETS_FILE = "C:\\Users\\HelenBelen\\Documents\\Code\\python-da-app\\client_secret.json"
 
 # This OAuth 2.0 access scope allows for full read/write access to the
 # authenticated user's account and requires requests to use an SSL connection.
@@ -36,12 +36,19 @@ app.secret_key = 'xxxx'
 def index():
   video_list = {}
   message = " "
+  nextPage = False
+  prevPage = False
 
   if 'credentials' in flask.session:
     try:
-      flask.session['tabledata'] = api_request()
+      flask.session['tabledata'] = api_request(True,False,False)
       video_list = flask.session['tabledata']
       message = "Table Updated From API On " + datetime.datetime.strftime(date.today(),'%m-%d-%Y')
+      if 'prevPage' in flask.session:
+          prevPage = True                
+      if 'nextPage' in flask.session:
+          nextPage = True
+      
     except:
       message = "Error: " + str(sys.exc_info())
       if 'tabledata' in flask.session:
@@ -51,10 +58,10 @@ def index():
         video_list = {}
         message += " - No Videos In Session Data"
 
-    return render_template('index.html', logged_in = True, videos = video_list, message = message)
+    return render_template('index.html', logged_in = True, videos = video_list, message = message, prevPage= prevPage, nextPage= nextPage)
 
   else:
-    return render_template('index.html', logged_in = False, videos = video_list, message = message)
+    return render_template('index.html', logged_in = False, videos = video_list, message = message, prevPage= prevPage, nextPage= nextPage)
 
  
 
@@ -77,6 +84,10 @@ def authorize():
   flask.session['state'] = state
 
   return flask.redirect(authorization_url)
+
+
+
+
 
 
 @app.route('/oauth2callback')
@@ -134,8 +145,23 @@ def download():
    
   return flask.redirect(flask.url_for('index'))
 
+@app.route('/page/<int:prev>/<int:nex>')
+def newpage(prev, nex):
+  if prev == 1:
+    prevPage = True
+  else:
+    prevPage = False
+  if nex == 1:
+    nextPage = True
+  else:
+    nextPage = False
 
-def api_request():
+  api_request(False,prevPage,nextPage)
+  return flask.redirext(flask.url_for('index'))
+
+
+
+def api_request(firstPage,prevPage=False,nextPage=False):
   if 'credentials' not in flask.session:
     return flask.redirect('authorize')
 
@@ -145,15 +171,29 @@ def api_request():
 
   youtube = googleapiclient.discovery.build(
     API_SERVICE_NAME, API_VERSION, credentials=credentials)
-  channel = youtube.channels().list(
-    part="snippet,contentDetails,statistics",
-    mine=True).execute()
   
+  # channel = youtube.channels().list(
+  #   part="snippet,contentDetails,statistics",
+  #   mine=True).execute()
+  
+  if firstPage:
+    playlist = youtube.videos().list(
+      part ='snippet,contentDetails',
+      myRating ='like',
+      maxResults = 25).execute()
+  elif prevPage:
+    playlist = youtube.videos().list(
+      part ='snippet,contentDetails',
+      myRating ='like',
+      maxResults = 25,
+      pageToken = flask.session['prevPage']).execute()
+  elif nextPage:
+    playlist = youtube.videos().list(
+      part ='snippet,contentDetails',
+      myRating ='like',
+      maxResults = 25,
+      pageToekn = flask.session['nextPage']).execute()
 
-  playlist = youtube.videos().list(
-    part ='snippet,contentDetails',
-    myRating ='like',
-    maxResults = 25).execute()
 
   # Save credentials back to session in case access token was refreshed.
   # ACTION ITEM: In a production app, you likely want to save these
@@ -167,7 +207,20 @@ def api_request():
 def process_data(a_list):
   processed_list = {}
   csv_list = {} 
-
+  try :
+    flask.session['nextPage'] = a_list['nextPageToken']
+    print(a_list['nextPageToken'])
+  
+  except:
+    print("There is not next page")
+  
+  try:
+    flask.session['prevPage'] = a_list['prevPageToken']
+    print(a_list['prevPageToken'])
+  
+  except:
+    print("The is no prev page")
+  
   for video in a_list['items']:
       newdate = datetime.datetime.strptime(
         video['snippet']['publishedAt'], 
