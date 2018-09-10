@@ -32,12 +32,12 @@
                  <div class="pager">
  
                 {% if prevPage %}
-                     <a class="btn btn-lg btn-success" href="{{url_for('newpage')}}">&laquo; Previous</a>
+                     <a class="btn btn-lg btn-success" onclick='new_page("previous")'>&laquo; Previous</a>
                 {% else %}
                      <a class="btn btn-lg btn-success" disabled>&laquo; Previous</a>
                 {% endif %}
                 {%if nextPage %}
-                    <a class="btn btn-lg btn-success" href="{{url_for('newpage')}}">Next &raquo;</a>
+                    <a class="btn btn-lg btn-success" onclick='new_page("next")'>Next &raquo;</a>
                 {% else %}
                     <a class="btn btn-lg btn-success" disabled>Next &raquo;</a>
                 {% endif %}

@@ -38,16 +38,29 @@ def index():
   message = " "
   nextPage = False
   prevPage = False
-
+  firstPage = False
+  showPrevButton = False
+  showNextButton = False
   if 'credentials' in flask.session:
     try:
-      flask.session['tabledata'] = api_request(True,False,False)
+      if 'prevPage' in flask.session and 'page_request' in flask.session and flask.session['page_request'] == "previous":
+          prevPage = True 
+                        
+      elif 'nextPage' in flask.session and 'page_request' in flask.session and flask.session['page_request'] == "next":
+          nextPage = True
+      else:
+          firstPage = True
+     
+     
+      flask.session['tabledata'] = api_request(firstPage,prevPage,nextPage)
       video_list = flask.session['tabledata']
       message = "Table Updated From API On " + datetime.datetime.strftime(date.today(),'%m-%d-%Y')
-      if 'prevPage' in flask.session:
-          prevPage = True                
-      if 'nextPage' in flask.session:
-          nextPage = True
+     
+      if 'prevPage' in flask.session and flask.session['prevPage'] is not None:
+        showPrevButton = True
+     
+      if 'nextPage' in flask.session and flask.session['nextPage'] is not None:
+        showNextButton = True
       
     except:
       message = "Error: " + str(sys.exc_info())
@@ -58,10 +71,10 @@ def index():
         video_list = {}
         message += " - No Videos In Session Data"
 
-    return render_template('index.html', logged_in = True, videos = video_list, message = message, prevPage= prevPage, nextPage= nextPage)
+    return render_template('index.html', logged_in = True, videos = video_list, message = message, prevPage= showPrevButton, nextPage= showNextButton)
 
   else:
-    return render_template('index.html', logged_in = False, videos = video_list, message = message, prevPage= prevPage, nextPage= nextPage)
+    return render_template('index.html', logged_in = False, videos = video_list, message = message, prevPage= showPrevButton, nextPage= showNextButton)
 
  
 
@@ -84,9 +97,6 @@ def authorize():
   flask.session['state'] = state
 
   return flask.redirect(authorization_url)
-
-
-
 
 
 
@@ -145,23 +155,15 @@ def download():
    
   return flask.redirect(flask.url_for('index'))
 
-@app.route('/page/<int:prev>/<int:nex>')
-def newpage(prev, nex):
-  if prev == 1:
-    prevPage = True
-  else:
-    prevPage = False
-  if nex == 1:
-    nextPage = True
-  else:
-    nextPage = False
 
-  api_request(False,prevPage,nextPage)
-  return flask.redirext(flask.url_for('index'))
+@app.route('/page',methods=['POST'])
+def page_request():
+  flask.session['page_request'] = request.json['data']
+  print(request.json['data'])
+  return request.json['data']
 
 
-
-def api_request(firstPage,prevPage=False,nextPage=False):
+def api_request(firstPage,prevPage,nextPage):
   if 'credentials' not in flask.session:
     return flask.redirect('authorize')
 
@@ -172,27 +174,27 @@ def api_request(firstPage,prevPage=False,nextPage=False):
   youtube = googleapiclient.discovery.build(
     API_SERVICE_NAME, API_VERSION, credentials=credentials)
   
-  # channel = youtube.channels().list(
-  #   part="snippet,contentDetails,statistics",
-  #   mine=True).execute()
-  
+
   if firstPage:
+    print("FIRST")
     playlist = youtube.videos().list(
       part ='snippet,contentDetails',
       myRating ='like',
       maxResults = 25).execute()
   elif prevPage:
+    print("PREV")
     playlist = youtube.videos().list(
       part ='snippet,contentDetails',
       myRating ='like',
       maxResults = 25,
       pageToken = flask.session['prevPage']).execute()
   elif nextPage:
+    print("NEXT")
     playlist = youtube.videos().list(
       part ='snippet,contentDetails',
       myRating ='like',
       maxResults = 25,
-      pageToekn = flask.session['nextPage']).execute()
+      pageToken = flask.session['nextPage']).execute()
 
 
   # Save credentials back to session in case access token was refreshed.
@@ -207,18 +209,21 @@ def api_request(firstPage,prevPage=False,nextPage=False):
 def process_data(a_list):
   processed_list = {}
   csv_list = {} 
+  
   try :
     flask.session['nextPage'] = a_list['nextPageToken']
     print(a_list['nextPageToken'])
   
   except:
-    print("There is not next page")
+    flask.session['nextPage'] = None
+    print("There is no next page")
   
   try:
     flask.session['prevPage'] = a_list['prevPageToken']
     print(a_list['prevPageToken'])
   
   except:
+    flask.session['prevPage'] = None
     print("The is no prev page")
   
   for video in a_list['items']:
