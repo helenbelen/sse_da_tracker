@@ -15,7 +15,7 @@ function select_all(){
 }
 
 function list_edit(check, value){
-	console.log(value)
+	
 	if(check.checked == false && selected_list.indexOf(value) >= 0){
 		//remove item
 		selected_list.splice(selected_list.indexOf(value),selected_list.indexOf(value)+1);
@@ -24,10 +24,7 @@ function list_edit(check, value){
 		// add item
 		selected_list.push(value)
 	}
-	console.log("List Change:");
-	console.log("Cookie " + this.getCookie("list"));
-	console.log("List: ")
-	console.log(selected_list)
+	update_storage();
 }
 
 function send_selected() {
@@ -59,19 +56,12 @@ if(selected_list.length > 0){
 
 
 function new_page(button_name) {
-	if (this.getCookie("list").length > 0){
-		this.setCookie("list", this.getCookie("list") + selected_list);
-	}
-	else{
-		this.setCookie("list",selected_list);
-	}
-	console.log("New Page");
-	console.log(this.getCookie("list"));
 	var xhttp = new XMLHttpRequest();
 	xhttp.onreadystatechange = function() {
 	    if (this.readyState == 4 && this.status == 200) {
 	    	window.location.reload();
 	    	console.log("Page Loaded");
+
 
 	    }
 	  };
@@ -82,24 +72,35 @@ function new_page(button_name) {
 
 }
 
-
-function setCookie(cname,array_list) {
-	
-    document.cookie = cname + "=" + array_list +";";
+function storage_available(){
+	return typeof(Storage) !== "undefined";
 }
 
-function getCookie(cname) {
-    var name = cname + "=";
-    var decodedCookie = decodeURIComponent(document.cookie);
-    var ca = decodedCookie.split(';');
-    for(var i = 0; i < ca.length; i++) {
-        var c = ca[i];
-        while (c.charAt(0) == ' ') {
-            c = c.substring(1);
-        }
-        if (c.indexOf(name) == 0) {
-            return c.substring(name.length, c.length);
-        }
-    }
-    return "";
+function update_storage(){
+	reset_checks();
+	checkboxes = document.getElementsByName("video");
+	for(i = 0; i < checkboxes.length; i++){
+		if(sessionStorage.getItem(checkboxes[i].value) != null && checkboxes[i].checked == false){
+			sessionStorage.removeItem(checkboxes[i].value);
+		}
+		else if (sessionStorage.getItem(checkboxes[i].value) == null && checkboxes[i].checked == true) {
+			sessionStorage.setItem(checkboxes[i].value,"selected");
+
+		}
+
+
+	}
+
+	console.log(sessionStorage.key)
+}
+
+function reset_checks(){
+	checkboxes = document.getElementsByName("video");
+	for(i = 0; i < checkboxes.length; i++){
+		if(sessionStorage.getItem(checkboxes[i].value) != null){
+			checkboxes[i].checked = true;
+		}
+	}
+
+	
 }
