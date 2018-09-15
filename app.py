@@ -35,12 +35,14 @@ app.secret_key = 'xxxx'
 @app.route("/")
 def index():
   video_list = {}
+  selected = {}
   message = " "
   nextPage = False
   prevPage = False
   firstPage = False
   showPrevButton = False
   showNextButton = False
+
   if 'credentials' in flask.session:
     try:
       if 'prevPage' in flask.session and 'page_request' in flask.session and flask.session['page_request'] == "previous":
@@ -54,6 +56,9 @@ def index():
      
       flask.session['tabledata'] = api_request(firstPage,prevPage,nextPage)
       video_list = flask.session['tabledata']
+      if 'selected_onpage' in flask.session:
+        selected = flask.session['selected_onpage']
+
       message = "Table Updated From API On " + datetime.datetime.strftime(date.today(),'%m-%d-%Y')
      
       if 'prevPage' in flask.session and flask.session['prevPage'] is not None:
@@ -71,10 +76,10 @@ def index():
         video_list = {}
         message += " - No Videos In Session Data"
 
-    return render_template('index.html', logged_in = True, videos = video_list, message = message, prevPage= showPrevButton, nextPage= showNextButton)
+    return render_template('index.html', logged_in = True, videos = video_list, message = message, prevPage= showPrevButton, nextPage= showNextButton,selected =selected)
 
   else:
-    return render_template('index.html', logged_in = False, videos = video_list, message = message, prevPage= showPrevButton, nextPage= showNextButton)
+    return render_template('index.html', logged_in = False, videos = video_list, message = message, prevPage= showPrevButton, nextPage= showNextButton,selected =selected)
 
  
 
@@ -158,8 +163,10 @@ def download():
 
 @app.route('/page',methods=['POST'])
 def page_request():
+  print(request)
   flask.session['page_request'] = request.json['data']
-  print(request.json['data'])
+  flask.session['selected_onpage'] = request.json['selected'];
+  
   return request.json['data']
 
 
@@ -273,6 +280,7 @@ def write_csv(selected_rows, rows):
   overall_total = 0
   mydate = date.today()
   filename = 'DARport-'+str(mydate)+'.csv'
+
 
   csv = 'date,title,duration\n'
   for key,value in rows.items():

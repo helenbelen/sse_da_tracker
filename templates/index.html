@@ -5,17 +5,21 @@
     {% if videos %}
         
 
-       <table id="videos">
+       <table id="videos" onchange="reset_checks()">
                 <tr>
                     <th>Select/Unselect <input type="checkbox" id="SelectAll" value="SelectAll" onclick="select_all()"></th>                
-                    <th> Date Video Liked </th>
+                    <th> Date Video Published </th>
                     <th> Video Title </th>
                     <th> Video Duration </th>
                 </tr>
                 {% for key,value in videos.items() %}
                 
                     <tr>
-                        <td><input type="checkbox" name="video" value="{{key}}"" onclick="list_edit(this,this.value)"></td>   
+                        {% if key in selected %}
+                             <td><input type="checkbox" name="video" value="{{key}}"" onclick="list_edit(this,this.value)" checked></td>
+                        {% else %}
+                            <td><input type="checkbox" name="video" value="{{key}}"" onclick="list_edit(this,this.value)"></td>
+                        {% endif %}
                         <td>{{key}}</td> 
 
                         <td>{{value[0]}}</td>
