@@ -1,5 +1,6 @@
 
 
+
 function select_all(){
 	checkboxes = document.getElementsByName("video");
 	for(i = 0; i < checkboxes.length; i++){
@@ -9,31 +10,19 @@ function select_all(){
 		else{
 			checkboxes[i].checked = false;
 		}
-		list_edit(checkboxes[i],checkboxes[i].value);
+		save_check(checkboxes[i],checkboxes[i].value);
 	}
 }
 
-function list_edit(check, value){
-	
-	// if(check.checked == false && selected_list.indexOf(value) >= 0){
-	// 	//remove item
-	// 	selected_list.splice(selected_list.indexOf(value),selected_list.indexOf(value)+1);
-	// }
-	// else if (check.checked == true && selected_list.indexOf(value) < 0){
-	// 	// add item
-	// 	selected_list.push(value)
-	// }
-	update_storage();
-}
 
 function send_selected() {
-my_list = get_selected();
-console.log("Selected:")
-console.log(my_list);
-if(my_list.length > 0){
-	  get_selected();
-	  var xhttp = new XMLHttpRequest();
-	  xhttp.onreadystatechange = function() {
+	my_list = get_selected();
+	console.log("Selected:")
+	console.log(my_list);
+	if(my_list.length > 0){
+		get_selected();
+		var xhttp = new XMLHttpRequest();
+		xhttp.onreadystatechange = function() {
 	    if (this.readyState == 4 && this.status == 200) {
 	    	var date = new Date();
 	     	var element = document.createElement('a');
@@ -43,17 +32,18 @@ if(my_list.length > 0){
 	     	document.body.appendChild(element);
 	     	element.click();
 	     	document.body.removeChild(element);
-
+	     	sessionStorage.clear();
+	     	reset_checks();
 	    }
 	  };
 	  xhttp.open("POST", "/download-file", true);
 	  xhttp.setRequestHeader("Content-type", "application/json;;charset=UTF-8");
 	  data = JSON.stringify({data : my_list});
 	  xhttp.send(data);
- }
- else{
- 	alert("Please Select At Least One Video To Download To A File.")
- }
+ 	}
+ 	else{
+ 		alert("Please Select At Least One Video To Download To A File.")
+ 	}
 }
 
 function get_selected(){
@@ -62,7 +52,8 @@ function get_selected(){
 		my_list.push(sessionStorage.key(i));
 	}
 
-	
+	console.log("My List");
+	console.log(my_list);
 	return my_list;
 }
 
@@ -86,25 +77,40 @@ function new_page(button_name) {
 }
 
 function storage_available(){
-	return typeof(Storage) !== "undefined";
+	if (typeof(Storage) == "undefined"){
+		console.log("This app will not work. Storage undefined");
+		alert("This app will not work. Storage undefined");
+		return false;
+	}
+	else{
+		return true;
+	}
 }
 
-function update_storage(){
-	//reset_checks();
-	checkboxes = document.getElementsByName("video");
-	for(i = 0; i < checkboxes.length; i++){
-		if(sessionStorage.getItem(checkboxes[i].value) != null && checkboxes[i].checked == false){
-			sessionStorage.removeItem(checkboxes[i].value);
+function save_check(check = null, value = null){
+	if(storage_available()){
+		if (value == null){
+			checkboxes = document.getElementsByName("video");
+			for(i = 0; i < checkboxes.length; i++){
+				storage_update(checkboxes[i],checkboxes[i].value);
+			}
 		}
-		else if (sessionStorage.getItem(checkboxes[i].value) == null && checkboxes[i].checked == true) {
-			sessionStorage.setItem(checkboxes[i].value,"selected");
-
+		else{
+			storage_update(check,value);
 		}
+		console.log(sessionStorage)
+	}
+}
 
+
+function storage_update(check,value){
+	if(sessionStorage.getItem(value) != null && check.checked == false){
+		sessionStorage.removeItem(value);
+	}
+	else if (sessionStorage.getItem(value) == null && check.checked == true) {
+		sessionStorage.setItem(value,"selected");
 
 	}
-
-	console.log(sessionStorage)
 }
 
 function reset_checks(){

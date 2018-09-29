@@ -18,7 +18,7 @@
                         {% if key in selected %}
                              <td><input type="checkbox" name="video" value="{{key}}"" onclick="list_edit(this,this.value)" checked></td>
                         {% else %}
-                            <td><input type="checkbox" name="video" value="{{key}}"" onclick="list_edit(this,this.value)"></td>
+                            <td><input type="checkbox" name="video" value="{{key}}" " onclick="save_check(this,this.value)"></td>
                         {% endif %}
                         <td>{{key}}</td> 
 

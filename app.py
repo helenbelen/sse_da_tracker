@@ -154,7 +154,7 @@ def revoke():
 @app.route('/download-file', methods=['POST'])
 def download():
   flask.session['selected_csvdata'] = request.json['data']
-  
+
   if 'csvdata' and 'selected_csvdata' in flask.session:
     return write_csv(flask.session['selected_csvdata'],flask.session['csvdata'])
    
@@ -163,7 +163,7 @@ def download():
 
 @app.route('/page',methods=['POST'])
 def page_request():
-  print(request)
+  
   flask.session['page_request'] = request.json['data']
   flask.session['selected_onpage'] = request.json['selected'];
   
@@ -183,20 +183,17 @@ def api_request(firstPage,prevPage,nextPage):
   
 
   if firstPage:
-    print("FIRST")
     playlist = youtube.videos().list(
       part ='snippet,contentDetails',
       myRating ='like',
       maxResults = 25).execute()
   elif prevPage:
-    print("PREV")
     playlist = youtube.videos().list(
       part ='snippet,contentDetails',
       myRating ='like',
       maxResults = 25,
       pageToken = flask.session['prevPage']).execute()
   elif nextPage:
-    print("NEXT")
     playlist = youtube.videos().list(
       part ='snippet,contentDetails',
       myRating ='like',
@@ -219,20 +216,16 @@ def process_data(a_list):
   
   try :
     flask.session['nextPage'] = a_list['nextPageToken']
-    print(a_list['nextPageToken'])
-  
+      
   except:
     flask.session['nextPage'] = None
-    print("There is no next page")
-  
+      
   try:
     flask.session['prevPage'] = a_list['prevPageToken']
-    print(a_list['prevPageToken'])
-  
+      
   except:
     flask.session['prevPage'] = None
-    print("The is no prev page")
-  
+      
   for video in a_list['items']:
       newdate = datetime.datetime.strptime(
         video['snippet']['publishedAt'], 
@@ -270,8 +263,11 @@ def process_data(a_list):
         total_minutes += i
 
       csv_list[d] = [video['snippet']['title'].replace(",",""),total_minutes]
-
-      flask.session['csvdata'] = csv_list
+      
+  if 'csvdata' in flask.session:
+    flask.session['csvdata'].update(csv_list)
+  else:
+    flask.session['csvdata'] = csv_list
 
   return processed_list
 
@@ -295,6 +291,7 @@ def write_csv(selected_rows, rows):
 def clear_credentials():
   if 'credentials' in flask.session:
     del flask.session['credentials']
+    del flask.session['selected_onpage']
     app.logger.debug ('Credentials have been cleared.<br><br>')
 
   return flask.redirect(flask.url_for('index'))
