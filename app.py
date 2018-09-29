@@ -17,7 +17,7 @@ app = Flask(__name__)
 
 # This variable specifies the name of a file that contains the OAuth 2.0
 # information for this application, including its client_id and client_secret.
-CLIENT_SECRETS_FILE = "/Users/HelenBelen/Documents/Code/datracker/client_secret.json"
+CLIENT_SECRETS_FILE = "C:\\Users\\HelenBelen\\Documents\\Code\\python-da-app\\client_secret.json"
 
 # This OAuth 2.0 access scope allows for full read/write access to the
 # authenticated user's account and requires requests to use an SSL connection.
@@ -35,13 +35,38 @@ app.secret_key = 'xxxx'
 @app.route("/")
 def index():
   video_list = {}
+  selected = {}
   message = " "
+  nextPage = False
+  prevPage = False
+  firstPage = False
+  showPrevButton = False
+  showNextButton = False
 
   if 'credentials' in flask.session:
     try:
-      flask.session['tabledata'] = api_request()
+      if 'prevPage' in flask.session and 'page_request' in flask.session and flask.session['page_request'] == "previous":
+          prevPage = True 
+                        
+      elif 'nextPage' in flask.session and 'page_request' in flask.session and flask.session['page_request'] == "next":
+          nextPage = True
+      else:
+          firstPage = True
+     
+     
+      flask.session['tabledata'] = api_request(firstPage,prevPage,nextPage)
       video_list = flask.session['tabledata']
+      if 'selected_onpage' in flask.session:
+        selected = flask.session['selected_onpage']
+
       message = "Table Updated From API On " + datetime.datetime.strftime(date.today(),'%m-%d-%Y')
+     
+      if 'prevPage' in flask.session and flask.session['prevPage'] is not None:
+        showPrevButton = True
+     
+      if 'nextPage' in flask.session and flask.session['nextPage'] is not None:
+        showNextButton = True
+      
     except:
       message = "Error: " + str(sys.exc_info())
       if 'tabledata' in flask.session:
@@ -51,10 +76,10 @@ def index():
         video_list = {}
         message += " - No Videos In Session Data"
 
-    return render_template('index.html', logged_in = True, videos = video_list, message = message)
+    return render_template('index.html', logged_in = True, videos = video_list, message = message, prevPage= showPrevButton, nextPage= showNextButton,selected =selected)
 
   else:
-    return render_template('index.html', logged_in = False, videos = video_list, message = message)
+    return render_template('index.html', logged_in = False, videos = video_list, message = message, prevPage= showPrevButton, nextPage= showNextButton,selected =selected)
 
  
 
@@ -77,6 +102,7 @@ def authorize():
   flask.session['state'] = state
 
   return flask.redirect(authorization_url)
+
 
 
 @app.route('/oauth2callback')
@@ -128,14 +154,23 @@ def revoke():
 @app.route('/download-file', methods=['POST'])
 def download():
   flask.session['selected_csvdata'] = request.json['data']
-  
+
   if 'csvdata' and 'selected_csvdata' in flask.session:
     return write_csv(flask.session['selected_csvdata'],flask.session['csvdata'])
    
   return flask.redirect(flask.url_for('index'))
 
 
-def api_request():
+@app.route('/page',methods=['POST'])
+def page_request():
+  
+  flask.session['page_request'] = request.json['data']
+  flask.session['selected_onpage'] = request.json['selected'];
+  
+  return request.json['data']
+
+
+def api_request(firstPage,prevPage,nextPage):
   if 'credentials' not in flask.session:
     return flask.redirect('authorize')
 
@@ -145,15 +180,26 @@ def api_request():
 
   youtube = googleapiclient.discovery.build(
     API_SERVICE_NAME, API_VERSION, credentials=credentials)
-  channel = youtube.channels().list(
-    part="snippet,contentDetails,statistics",
-    mine=True).execute()
   
 
-  playlist = youtube.videos().list(
-    part ='snippet,contentDetails',
-    myRating ='like',
-    maxResults = 25).execute()
+  if firstPage:
+    playlist = youtube.videos().list(
+      part ='snippet,contentDetails',
+      myRating ='like',
+      maxResults = 25).execute()
+  elif prevPage:
+    playlist = youtube.videos().list(
+      part ='snippet,contentDetails',
+      myRating ='like',
+      maxResults = 25,
+      pageToken = flask.session['prevPage']).execute()
+  elif nextPage:
+    playlist = youtube.videos().list(
+      part ='snippet,contentDetails',
+      myRating ='like',
+      maxResults = 25,
+      pageToken = flask.session['nextPage']).execute()
+
 
   # Save credentials back to session in case access token was refreshed.
   # ACTION ITEM: In a production app, you likely want to save these
@@ -167,7 +213,19 @@ def api_request():
 def process_data(a_list):
   processed_list = {}
   csv_list = {} 
-
+  
+  try :
+    flask.session['nextPage'] = a_list['nextPageToken']
+      
+  except:
+    flask.session['nextPage'] = None
+      
+  try:
+    flask.session['prevPage'] = a_list['prevPageToken']
+      
+  except:
+    flask.session['prevPage'] = None
+      
   for video in a_list['items']:
       newdate = datetime.datetime.strptime(
         video['snippet']['publishedAt'], 
@@ -205,8 +263,11 @@ def process_data(a_list):
         total_minutes += i
 
       csv_list[d] = [video['snippet']['title'].replace(",",""),total_minutes]
-
-      flask.session['csvdata'] = csv_list
+      
+  if 'csvdata' in flask.session:
+    flask.session['csvdata'].update(csv_list)
+  else:
+    flask.session['csvdata'] = csv_list
 
   return processed_list
 
@@ -215,6 +276,7 @@ def write_csv(selected_rows, rows):
   overall_total = 0
   mydate = date.today()
   filename = 'DARport-'+str(mydate)+'.csv'
+
 
   csv = 'date,title,duration\n'
   for key,value in rows.items():
@@ -229,6 +291,7 @@ def write_csv(selected_rows, rows):
 def clear_credentials():
   if 'credentials' in flask.session:
     del flask.session['credentials']
+    del flask.session['selected_onpage']
     app.logger.debug ('Credentials have been cleared.<br><br>')
 
   return flask.redirect(flask.url_for('index'))

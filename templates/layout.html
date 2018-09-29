@@ -24,11 +24,28 @@
         
         <div class="jumbotron">
            {% if logged_in %}
+
                 <p class="lead"></p>
                 <p><a class="btn btn-lg btn-danger" href="{{url_for('revoke')}}" role="button">Revoke Access</a><p class="message">{{message}}</p>
                 </p>
-                
+
+                 <div class="pager">
+ 
+                {% if prevPage %}
+                     <a class="btn btn-lg btn-success" onclick='new_page("previous")'>&laquo; Previous</a>
+                {% else %}
+                     <a class="btn btn-lg btn-success" disabled>&laquo; Previous</a>
+                {% endif %}
+                {%if nextPage %}
+                    <a class="btn btn-lg btn-success" onclick='new_page("next")'>Next &raquo;</a>
+                {% else %}
+                    <a class="btn btn-lg btn-success" disabled>Next &raquo;</a>
+                {% endif %}
+
+                </div>
+
                 {% block body %}{% endblock %}  
+                
                 <br>
                 <a class="btn btn-info btn-lg btn-block" onclick='send_selected()' style="vertical-align:middle" role="button">Export To CSV</a> 
             {% else %}
