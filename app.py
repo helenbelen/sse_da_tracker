@@ -1,6 +1,7 @@
 import flask
 from flask import Flask, render_template, make_response, request
 import os
+import os.path
 import requests
 import json
 import re
@@ -10,22 +11,21 @@ import csv
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
-import oauth2client
-from oauth2client.client import OAuth2WebServerFlow
+
 import sys
 
 app = Flask(__name__)
 
 # This variable specifies the name of a file that contains the OAuth 2.0
 # information for this application, including its client_id and client_secret.
-CLIENT_SECRETS_FILE = "client_secret.json"
+
+CLIENT_SECRETS_FILE = os.path.join(os.getcwd(),'client_secret.json')
 
 # This OAuth 2.0 access scope allows for full read/write access to the
 # authenticated user's account and requires requests to use an SSL connection.
 SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
-
 
 # Note: A secret key is included in the sample so that it works.
 # If you use this code in your application, replace this with a truly secret
@@ -316,4 +316,5 @@ if __name__ == "__main__":
 
   # Specify a hostname and port that are set as a valid redirect URI
   # for your API project in the Google API Console.
-  app.run('localhost', 8080, debug=False)
+  #app.run('https://git.heroku.com/', 8080, debug=False)
+  app.run()
